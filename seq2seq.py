@@ -136,7 +136,7 @@ class Seq2seq(object):
         self.saver = tf.train.Saver(max_to_keep=3)
 
     def train(self, sess, data):
-        output = [self.update, self.loss]
+        output = [self.update, self.loss, self.total_loss]
 
         input = {self.posts_len: data['posts_len'],
                  self.responses_len: data['responses_len'],

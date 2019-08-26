@@ -2,7 +2,7 @@
 import json
 
 data_set = []
-with open('../data/dataset.txt') as f:
+with open('../data/train_set.txt') as f:
     for line in f:
         data_set.append(json.loads(line))
 

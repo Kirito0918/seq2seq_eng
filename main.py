@@ -2,15 +2,18 @@ import json
 import numpy as np
 import tensorflow as tf
 from seq2seq import Seq2seq
+import time
+import random
+random.seed(time.time())
 
 TRAIN = True
 TRAIN_CONTINUE = False  # 是否继续训练
 TEST = False
 INFERENCE = False
 NUM_SYMBOL = 30000
-NUM_UNITS = 300
+NUM_UNITS = 128
 OUTPUT_ALIGNMENTS = False
-BATCH_SIZE = 128
+BATCH_SIZE = 64
 NUM_LAYERS = 2
 LEARNING_RATE = 0.0001
 MAX_GRADIENT_NORM = 5.0
@@ -69,14 +72,14 @@ def evalueate(sess, model, validation_set):
 def main():
     # 读取训练集
     data_set = []
-    with open('./data/dataset.txt') as f:
+    with open('./data/train_set.txt') as f:
         for line in f:
             data_set.append(json.loads(line))
     print("num_data: %s" % len(data_set))
 
     # 读取验证集
     validation_set = []
-    with open('./data/validationset.txt') as f:
+    with open('./data/valid_set.txt') as f:
         for line in f:
             validation_set.append(json.loads(line))
     print("num_validation: %s" % len(validation_set))
@@ -134,6 +137,7 @@ def main():
             print(model.print_parameters())
             epoch = 0
             while True:
+                random.shuffle(data_set)
                 start = 0
                 while start < len(data_set):
                     if start >= len(data_set):
@@ -143,20 +147,48 @@ def main():
                         batch_data = get_data(data_set[start:])
                     else:
                         batch_data = get_data(data_set[start: end])
-                    _, loss = model.train(sess, batch_data)
+                    _, loss, total_loss = model.train(sess, batch_data)
+                    batch_loss = total_loss / len(batch_data)
                     if model.global_step.eval() % 100 == 0:
                         print("epoch: %s" % epoch, end=" ")
                         print("global_step: %s" % model.global_step.eval(), end=" ")
                         print("start: %s" % start, end=" ")
-                        print("loss = ", loss)
+                        print("loss = ", loss, end=" ")
+                        print("ppl = ", np.exp(batch_data))
+                        model.saver.save(sess, '%s/checkpoint' % TRAIN_DIR, global_step=model.global_step)
                     start = end
-                model.saver.save(sess, '%s/checkpoint' % TRAIN_DIR, global_step=model.global_step)
                 epoch = epoch + 1
                 loss_per_data = evalueate(sess, model, validation_set)
                 print("mean loss of per data on validation set: ", loss_per_data)
+                print("ppl of per data on validation set: ", np.exp(loss_per_data))
 
         if TEST:
-            pass
+            model.saver.restore(sess, tf.train.latest_checkpoint(TRAIN_DIR))
+            fr = open('./data/test_set.txt', 'r', encoding='utf8')
+            fw = open('./data/result.txt', 'w', encoding='utf8')
+
+            test_set = []
+            for line in fr:
+                data_set.append(json.loads(line))
+            loss_per_data = evalueate(sess, model, test_set)
+            ppl = "ppl of per data on validation set: %f" % np.exp(loss_per_data)
+            fw.write(ppl)
+
+            for line in fr:
+                data = json.loads(line)
+                post = data['post']
+                posts_len = [len(post)]
+                posts_string = [post]
+                words = model.inference(sess, {"posts_len": np.array(posts_len, dtype=np.int32),
+                                               "posts_string": np.array(posts_string)})
+                word = words[0][0]
+                word = [str(item, encoding="utf-8") for item in word]
+                word = word[: word.find('_EOS')]
+                data['result'] = word
+                fw.write(json.dumps(data)+'\n')
+
+            fw.close()
+            fr.close()
 
         if INFERENCE:
             model.saver.restore(sess, tf.train.latest_checkpoint(TRAIN_DIR))
