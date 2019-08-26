@@ -148,7 +148,7 @@ def main():
                     else:
                         batch_data = get_data(data_set[start: end])
                     _, loss, total_loss = model.train(sess, batch_data)
-                    batch_loss = np.sum(total_loss[0]) / len(batch_data)
+                    batch_loss = total_loss / len(batch_data)
                     if model.global_step.eval() % 20000 == 0:
                         print("epoch: %s" % epoch, end=" ")
                         print("global_step: %s" % model.global_step.eval(), end=" ")
