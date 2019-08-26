@@ -148,13 +148,13 @@ def main():
                     else:
                         batch_data = get_data(data_set[start: end])
                     _, loss, total_loss = model.train(sess, batch_data)
-                    batch_loss = total_loss / len(batch_data)
+                    batch_loss = np.sum(total_loss[0]) / len(batch_data)
                     if model.global_step.eval() % 100 == 0:
                         print("epoch: %s" % epoch, end=" ")
                         print("global_step: %s" % model.global_step.eval(), end=" ")
                         print("start: %s" % start, end=" ")
                         print("loss = ", loss, end=" ")
-                        print("ppl = ", np.exp(batch_data))
+                        print("ppl = ", np.exp(batch_loss))
                         model.saver.save(sess, '%s/checkpoint' % TRAIN_DIR, global_step=model.global_step)
                     start = end
                 epoch = epoch + 1
