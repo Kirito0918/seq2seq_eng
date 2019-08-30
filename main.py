@@ -148,19 +148,17 @@ def main():
                     else:
                         batch_data = get_data(data_set[start: end])
                     _, loss, total_loss = model.train(sess, batch_data)
-                    batch_loss = total_loss / len(batch_data)
                     if model.global_step.eval() % 20000 == 0:
                         print("epoch: %s" % epoch, end=" ")
                         print("global_step: %s" % model.global_step.eval(), end=" ")
                         print("start: %s" % start, end=" ")
                         print("loss = ", loss, end=" ")
-                        print("ppl = ", np.exp(batch_loss))
+                        print("ppl = ", np.exp(loss))
                         model.saver.save(sess, '%s/checkpoint' % TRAIN_DIR, global_step=model.global_step)
                     start = end
                 epoch = epoch + 1
                 loss_per_data = evalueate(sess, model, validation_set)
                 print("mean loss of per data on validation set: ", loss_per_data)
-                print("ppl of per data on validation set: ", np.exp(loss_per_data))
 
         if TEST:
             model.saver.restore(sess, tf.train.latest_checkpoint(TRAIN_DIR))
@@ -169,9 +167,15 @@ def main():
 
             test_set = []
             for line in fr:
-                data_set.append(json.loads(line))
+                test_set.append(json.loads(line))
+
+            total_len = 0
+            for data in test_set:
+                total_len += (len(data['response']) + 1)
+
             loss_per_data = evalueate(sess, model, test_set)
-            ppl = "ppl of per data on validation set: %f" % np.exp(loss_per_data)
+            ppl_per_word = loss_per_data * len(test_set) / total_len
+            ppl = "ppl on test set: %f" % np.exp(ppl_per_word)
             fw.write(ppl)
 
             for data in fr:
