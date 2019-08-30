@@ -174,8 +174,7 @@ def main():
             ppl = "ppl of per data on validation set: %f" % np.exp(loss_per_data)
             fw.write(ppl)
 
-            for line in fr:
-                data = json.loads(line)
+            for data in fr:
                 post = data['post']
                 posts_len = [len(post)]
                 posts_string = [post]
@@ -183,7 +182,6 @@ def main():
                                                "posts_string": np.array(posts_string)})
                 word = words[0][0]
                 word = [str(item, encoding="utf-8") for item in word]
-                word = word[: word.find('_EOS')]
                 data['result'] = word
                 fw.write(json.dumps(data)+'\n')
 
